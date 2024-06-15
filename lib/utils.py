@@ -1,34 +1,40 @@
 import hashlib
-import os
 import json
+import os
 import re
-import sys
 import urllib
-import xbmc
-import xbmcvfs
-import xbmcaddon
 import xml.etree.ElementTree as etree
 
-ADDON    = xbmcaddon.Addon()
+import xbmc
+import xbmcaddon
+import xbmcvfs
+
+ADDON = xbmcaddon.Addon()
 ADDONID = ADDON.getAddonInfo('id')
 LANGUAGE = ADDON.getLocalizedString
 
 # supported image types by the screensaver
-IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef', '.webp', '.jp2', '.apng']
+IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp',
+               '.tga', '.ico', '.nef', '.webp', '.jp2', '.apng']
 HEIF_TYPES = ['.heic', '.heif']
 MPO_TYPES = ['.mpo']
-RAW_TYPES = ['.3fr', '.arw', '.cr2', '.crw', '.dcr', '.dng', '.erf', '.kdc', '.mdc', '.mef', '.mos', '.mrw', '.nef', '.nrw', '.orf', '.pef', '.ppm', '.raf', '.raw', '.rw2', '.srw', '.x3f']
+RAW_TYPES = ['.3fr', '.arw', '.cr2', '.crw', '.dcr', '.dng', '.erf', '.kdc',
+             '.mdc', '.mef', '.mos', '.mrw', '.nef', '.nrw', '.orf', '.pef',
+             '.ppm', '.raf', '.raw', '.rw2', '.srw', '.x3f']
 CACHEFOLDER = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
 CACHEFILE = os.path.join(CACHEFOLDER, 'cache_%s')
 RESUMEFILE = os.path.join(CACHEFOLDER, 'offset')
 ASFILE = xbmcvfs.translatePath('special://profile/advancedsettings.xml')
 
+
 def log(txt):
     message = '%s: %s' % (ADDONID, txt)
     xbmc.log(msg=message, level=xbmc.LOGDEBUG)
 
+
 def checksum(path):
     return hashlib.md5(path).hexdigest()
+
 
 def create_cache(path, hexfile):
     images = walk(path)
@@ -38,7 +44,7 @@ def create_cache(path, hexfile):
     dirs, files = xbmcvfs.listdir(CACHEFOLDER)
     for item in files:
         if item != 'settings.xml':
-            xbmcvfs.delete(os.path.join(CACHEFOLDER,item))
+            xbmcvfs.delete(os.path.join(CACHEFOLDER, item))
     if images:
         # create cache file
         try:
@@ -47,6 +53,7 @@ def create_cache(path, hexfile):
             cache.close()
         except:
             log('failed to save cachefile')
+
 
 def get_excludes():
     regexes = []
@@ -61,6 +68,7 @@ def get_excludes():
         except:
             pass
     return regexes
+
 
 def walk(path):
     images = []
@@ -86,7 +94,8 @@ def walk(path):
                 IMAGE_TYPES.extend(RAW_TYPES)
             # get all files and subfolders
             if folder.startswith('plugin://'):
-                getroot = xbmc.executeJSONRPC('{"jsonrpc":"2.0", "method":"Files.GetDirectory", "params":{"directory":"%s", "sort":{"method":"label"}}, "id":1 }' % folder)
+                getroot = xbmc.executeJSONRPC(
+                    '{"jsonrpc":"2.0", "method":"Files.GetDirectory", "params":{"directory":"%s", "sort":{"method":"label"}}, "id":1 }' % folder)
                 root = json.loads(getroot)
                 if 'result' in root and 'files' in root["result"]:
                     for item in root["result"]["files"]:
@@ -101,7 +110,8 @@ def walk(path):
             if not folder.startswith('plugin://'):
                 # natural sort
                 convert = lambda text: int(text) if text.isdigit() else text
-                alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+                alphanum_key = lambda key: [convert(c) for c in
+                                            re.split('([0-9]+)', key)]
                 files.sort(key=alphanum_key)
             for item in files:
                 # check pictureexcludes from as.xml
@@ -118,11 +128,13 @@ def walk(path):
                             break
                 # filter out all images
                 if folder.startswith('plugin://'):
-                    if os.path.splitext(item["label"])[1].lower() in IMAGE_TYPES and not fileskip:
+                    if os.path.splitext(item["label"])[
+                        1].lower() in IMAGE_TYPES and not fileskip:
                         images.append([item["file"], item["label"]])
                 else:
-                    if os.path.splitext(item)[1].lower() in IMAGE_TYPES and not fileskip:
-                        images.append([os.path.join(folder,item), item])
+                    if os.path.splitext(item)[
+                        1].lower() in IMAGE_TYPES and not fileskip:
+                        images.append([os.path.join(folder, item), item])
             if xbmcaddon.Addon().getSettingBool('recursive'):
                 for item in dirs:
                     # check pictureexcludes from as.xml
@@ -139,7 +151,8 @@ def walk(path):
                         if item.startswith('plugin://'):
                             images += walk(item)
                         else:
-                            images += walk(os.path.join(folder,item,'')) # make sure paths end with a slash
+                            images += walk(os.path.join(folder, item,
+                                                        ''))  # make sure paths end with a slash
         else:
             log('folder does not exist')
     return images
