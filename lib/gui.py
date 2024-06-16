@@ -27,6 +27,15 @@ from lib.utils import *
 ADDON = xbmcaddon.Addon()
 SKINDIR = xbmc.getSkinDir()
 
+# filename matcher
+TITLE_PATTERN = re.compile(
+    r"([\w\s-]+)\{([\w\s-]+)\}\(([\d-]+)\)_\[([\w\s-]+)\]\((\d+)\)\{([\w\s,-]+)\}",
+    re.UNICODE)
+
+DEFAULT_TITLE_Y = 850
+DEFAULT_INFO_Y = 895
+WRAP_OFFSET = 15
+
 # images types that can contain exif/iptc data
 EXIF_TYPES = ('.jpg', '.jpeg', '.tif', '.tiff')
 
@@ -128,6 +137,7 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                 self.image4 = self.getControl(6)
         if self.slideshow_name == 0:
             self.getControl(99).setVisible(False)
+            self.getControl(398).setVisible(False)
         else:
             self.namelabel = self.getControl(99)
         self.datelabel = self.getControl(100)
@@ -145,7 +155,8 @@ class Screensaver(xbmcgui.WindowXMLDialog):
             self._set_prop('Background', 'show')
 
     def _start_show(self, items):
-        # we need to start the update thread after the deep copy of self.items finishes
+        # we need to start the update thread after the deep copy of
+        # self.items finishes
         thread = img_update(data=self._get_items)
         thread.start()
         # start with image 1
@@ -162,8 +173,8 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                     continue
                 # add image to gui
                 useCache = False
-                if img[0].startswith(
-                    'http'):  # do not redownload images from online sources each time
+                # do not redownload images from online sources each time
+                if img[0].startswith('http'):
                     useCache = True
                 cur_img.setImage(img[0], useCache)
                 # add background image to gui
@@ -177,7 +188,8 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                     xbmc.sleep(1000)
                 else:
                     self.startup = False
-                # get exif and iptc tags if enabled in settings and we have an image that can contain this data
+                # get exif and iptc tags if enabled in settings and we have an
+                # image that can contain this data
                 datetime = ''
                 title = ''
                 description = ''
@@ -296,49 +308,11 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                     self.textbox.setVisible(True)
                 else:
                     self.textbox.setVisible(False)
-                # get the file or foldername if enabled in settings
+                # get the file or folder name if enabled in settings
                 if self.slideshow_name != 0:
-                    if self.slideshow_name == 1:  # filename
-                        if self.slideshow_type == 2:
-                            if self.slideshow_path.startswith('plugin://'):
-                                NAME, EXT = os.path.splitext(
-                                    os.path.basename(img[1]))
-                            else:
-                                NAME, EXT = os.path.splitext(
-                                    os.path.basename(img[0]))
-                        else:
-                            NAME = img[1]
-                    elif self.slideshow_name == 2:  # directory name
-                        if self.slideshow_path.startswith('plugin://'):
-                            NAME, EXT = os.path.splitext(os.path.basename(
-                                img[1]))  # only filename is available
-                        else:
-                            ROOT, NAME = os.path.split(os.path.dirname(img[0]))
-                    elif self.slideshow_name == 3:  # directory name / filename
-                        if self.slideshow_type == 2:
-                            if self.slideshow_path.startswith('plugin://'):
-                                NAME, EXT = os.path.splitext(os.path.basename(
-                                    img[1]))  # only filename is available
-                            else:
-                                ROOT, FOLDER = os.path.split(
-                                    os.path.dirname(img[0]))
-                                FILE, EXT = os.path.splitext(
-                                    os.path.basename(img[0]))
-                                NAME = FOLDER + ' / ' + FILE
-                        else:
-                            ROOT, FOLDER = os.path.split(
-                                os.path.dirname(img[0]))
-                            NAME = FOLDER + ' / ' + img[1]
-                    elif self.slideshow_name == 4:  # full path
-                        if self.slideshow_path.startswith('plugin://'):
-                            NAME, EXT = os.path.splitext(os.path.basename(
-                                img[1]))  # only filename is available
-                        else:
-                            NAME = os.path.realpath(img[0])
-                    # self.namelabel.setLabel(NAME)
-                    self.namelabel.setLabel(
-                        "[B]Boooooooo!!!!!???[/B]")  # set animations
-                    self.getControl(399).setLabel("[I]SMoooooo[/I]")
+                    # hide existing name label
+                    self.namelabel.setVisible(False)
+                    self.display_gallery_label(img)
                 if self.slideshow_effect == 0:
                     # add slide anim
                     self._set_prop('Slide%d' % order[0], '0')
@@ -373,20 +347,85 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                     not self.stop) and count > 0:
                     count -= 1
                     xbmc.sleep(1000)
-                # break out of the for loop if onScreensaverDeactivated is called
+                # break out of the for loop if onScreensaverDeactivated is
+                # called
                 if self.stop or self.Monitor.abortRequested():
                     break
                 self.position += 1
             self.offset = 0
             items = copy.deepcopy(self.items)
 
+    @staticmethod
+    def wrap_words(data: str, wrap_len: int = 100, wrap_limit: int = 3):
+        wrapped = ['']
+        if len(data) > wrap_len:
+            words = re.split(r"\s+", data.strip(), re.UNICODE)
+            line = 0
+            for i in range(0, len(words)):
+                word = words[i].strip()
+                length_would_be = len(wrapped[line]) + len(word)
+                if line < wrap_limit:
+                    if length_would_be > wrap_len:
+                        line += 1
+                        wrapped.append('')
+                    wrapped[line] += word + ' '
+                else:  # we are on the last line
+                    wrapped[line] += word + ' '
+                    if length_would_be > wrap_len:
+                        wrapped[line] = wrapped[line][:-3] + '...'
+                        break
+        else:
+            wrapped = [data]
+        for i in range(0, len(wrapped)):
+            wrapped[i] = wrapped[i].strip()
+        return '\n'.join(wrapped)
+
+    def display_gallery_label(self, img):
+        """
+        Regex groups:
+            0: Artist, 1: Origin, 2: Lifespan, 3: Title, 4: Year, 5: Media
+        :param img: The pattern-formatted filepath of the image
+        :return:
+        """
+        title = self.getControl(399)
+        info = self.getControl(400)
+        artist = self.getControl(401)
+        bio = self.getControl(402)
+
+        filename = img[1]
+        match = re.match(TITLE_PATTERN, filename)
+        if match is not None:
+            groups = match.groups()
+            wrapped = self.wrap_words(groups[3], 23, 1)
+            # title - handle word wrap line break
+            if wrapped.find('\n') != -1:
+                title.setPosition(title.getX(), DEFAULT_TITLE_Y + WRAP_OFFSET)
+                info.setPosition(info.getX(), DEFAULT_INFO_Y + WRAP_OFFSET * 2)
+            else:
+                title.setPosition(title.getX(), DEFAULT_TITLE_Y)
+                info.setPosition(info.getX(), DEFAULT_INFO_Y)
+            title.setLabel("[B]{}[/B]".format(wrapped))
+            # media
+            year = "[I][COLOR F0B2B2B2]{}[/COLOR][/I]".format(groups[4])
+            info.setLabel("{} — {}".format(groups[5], year))
+            # artist
+            artist.setLabel("[B]{}[/B]".format(groups[0]))
+            # bio
+            lifespan = "[I][COLOR F0B2B2B2]{}[/COLOR][/I]".format(groups[2])
+            bio.setLabel("{}, {}".format(groups[1], lifespan))
+        else:
+            msg = "Image name not correctly formatted: {}".format(filename)
+            xbmc.log(msg, xbmc.LOGERROR)
+            title.setLabel(filename)
+
     def _get_items(self, update=False):
         self.slideshow_type = ADDON.getSettingInt('type')
         log('slideshow type: %i' % self.slideshow_type)
         # check if we have an image folder, else fallback to video fanart
         if self.slideshow_type == 2:
+            # check if path has changed, so we can create a new cache at startup
             hexfile = checksum(self.slideshow_path.encode('utf-8')) + '_' + str(
-                self.slideshow_recursive)  # check if path has changed, so we can create a new cache at startup
+                self.slideshow_recursive)
             log('image path: %s' % self.slideshow_path)
             log('update: %s' % update)
             if (not xbmcvfs.exists(
