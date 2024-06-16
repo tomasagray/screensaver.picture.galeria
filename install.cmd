@@ -3,7 +3,7 @@
 
 echo Installing Galeria for Kodi...
 :: Kodi addon directory
-Set "kodi-dir=%APPDATA%\Kodi\addons\screensaver.galeria\"
+Set "kodi-dir=%APPDATA%\Kodi\addons\screensaver.picture.galeria\"
 Set "work-dir=%~dp0"
 :: Top-level files & dirs
 Set "main=%work-dir%\default.py"
