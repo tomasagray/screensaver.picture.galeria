@@ -11,10 +11,8 @@ Set "work-dir=%~dp0"
 
 :: Top-level files & dirs
 Set "main=%work-dir%\default.py"
-Set "fanart=%work-dir%\fanart.jpg"
-Set "icon=%work-dir%\icon.jpg"
 Set "addon=%work-dir%\addon.xml"
-Set "lic=%work-dir%\LICENSE"
+Set "lic=%work-dir%\LICENSE.txt"
 Set "lib=%work-dir%\lib"
 Set "resources=%work-dir%\resources"
 
@@ -30,8 +28,6 @@ mkdir %archive%
 echo Copying files to tmp dir: %archive%...
 COPY %main% "%archive%\"
 COPY %addon% "%archive%\"
-COPY %fanart% "%archive%\"
-COPY %icon% "%archive%\"
 COPY %lic% "%archive%\"
 XCOPY /e /y /q %lib% "%archive%\lib\"
 XCOPY /e /y /q %resources% "%archive%\resources\"
