@@ -28,8 +28,14 @@ ADDON = xbmcaddon.Addon()
 SKINDIR = xbmc.getSkinDir()
 
 # filename matcher
+ARTIST = r"([\w\s'()&-]+)"
+ORIGIN = r'\{([\w\s-]+)\}'
+LIFESPAN = r'\(([\d-]+)\)'
+TITLE = r"\[([\w\s',()&!$@;:.?#+-]+)\]"
+YEAR = r'\((\d+)\)'
+MEDIA = r'\{([\w\s,+&()-]+)\}'
 TITLE_PATTERN = re.compile(
-    r"([\w\s-]+)\{([\w\s-]+)\}\(([\d-]+)\)_\[([\w\s-]+)\]\((\d+)\)\{([\w\s,-]+)\}",
+    ARTIST + ORIGIN + LIFESPAN + '_' + TITLE + YEAR + MEDIA,
     re.UNICODE)
 
 DEFAULT_TITLE_Y = 850
